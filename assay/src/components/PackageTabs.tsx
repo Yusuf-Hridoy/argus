@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Copy, Check, Download } from 'lucide-react'
 import type { AssayResult } from '../types/assay'
+import { cardClass } from '../lib/ui'
 
 type Tab = 'cv' | 'letter' | 'answers'
 
@@ -43,6 +44,16 @@ function bundleMarkdown(result: AssayResult) {
   ].join('\n')
 }
 
+function slug(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+}
+
 export default function PackageTabs({ result }: { result: AssayResult }) {
   const [tab, setTab] = useState<Tab>('cv')
   const [copied, setCopied] = useState(false)
@@ -60,17 +71,14 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
   }
 
   const onDownload = () => {
-    const slug = result.company
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
+    const parts = [slug(result.roleTitle), slug(result.company)].filter(Boolean)
     const blob = new Blob([bundleMarkdown(result)], {
       type: 'text/markdown;charset=utf-8',
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `application-${slug || 'package'}.md`
+    a.download = `assay-${parts.join('-') || 'package'}.md`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -79,7 +87,7 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
     'flex items-center gap-1.5 rounded-md border border-[#d8d1bf] bg-[#faf7f0] px-3 py-1.5 text-[13px] text-[#26221b] transition-colors hover:bg-[#f0ebdd]'
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#d8d1bf] bg-[#faf7f0] shadow-[0_1px_2px_rgba(40,35,25,0.06),0_8px_24px_rgba(40,35,25,0.06)]">
+    <div className={`overflow-hidden ${cardClass}`}>
       {/* TAB BAR */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-[#e2dccb] px-4 py-2">
         <div className="flex items-center gap-1">

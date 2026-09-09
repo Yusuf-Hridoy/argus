@@ -1,6 +1,8 @@
 import type { AssayResult } from '../types/assay'
+import { RateLimitError } from './providers'
+import { validateAssayResult } from './validate'
 
-const SYSTEM_PROMPT = `You are Assay, an expert hiring-team simulator. A candidate gives you their master resume and a job description. You produce a complete, tailored application package AND grade it honestly, the way a real hiring team would.
+export const SYSTEM_PROMPT = `You are Assay, an expert hiring-team simulator. A candidate gives you their master resume and a job description. You produce a complete, tailored application package AND grade it honestly, the way a real hiring team would.
 
 Rules you must follow:
 1. NEVER fabricate experience, metrics, employers, degrees, or skills. You may reframe, reorder, and emphasize what exists in the master resume — nothing more.
@@ -83,55 +85,82 @@ export async function assayApplication(
   resume: string,
   jobDescription: string,
 ): Promise<AssayResult> {
-  const res = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=' +
-      encodeURIComponent(apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text:
-                  'MASTER RESUME:\n' + resume + '\n\n---\n\nJOB DESCRIPTION:\n' + jobDescription,
-              },
-            ],
+  const attempt = async (): Promise<string> => {
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=' +
+        encodeURIComponent(apiKey),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text:
+                    'MASTER RESUME:\n' + resume + '\n\n---\n\nJOB DESCRIPTION:\n' + jobDescription,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_SCHEMA,
+            temperature: 0.4,
           },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-          temperature: 0.4,
-        },
-      }),
-    },
-  )
+        }),
+      },
+    )
 
-  if (!res.ok) {
-    let message = `Request failed with status ${res.status}`
-    try {
-      const err = await res.json()
-      if (err?.error?.message) message = err.error.message
-    } catch {
-      // keep the status-based message
+    if (!res.ok) {
+      let message = `Request failed with status ${res.status}`
+      try {
+        const err = await res.json()
+        if (err?.error?.message) message = err.error.message
+      } catch {
+        // keep the status-based message
+      }
+      if (res.status === 400 && /api key/i.test(message)) {
+        throw new Error('Your API key looks invalid. Check it and try again.')
+      }
+      if (res.status === 429) {
+        throw new RateLimitError('gemini', 'Gemini')
+      }
+      if (res.status >= 500) {
+        const serverError = new Error(message) as Error & { retryable?: boolean }
+        serverError.retryable = true
+        throw serverError
+      }
+      throw new Error(message)
     }
-    if (res.status === 400 && /api key/i.test(message)) {
-      throw new Error('Your API key looks invalid. Check it and try again.')
+
+    const data = await res.json()
+    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!text) {
+      throw new Error('The model returned an empty response. Try again.')
     }
-    if (res.status === 429) {
-      throw new Error('Rate limit hit on your API key. Wait a minute and retry.')
-    }
-    throw new Error(message)
+    return text
   }
 
-  const data = await res.json()
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!text) {
-    throw new Error('The model returned an empty response. Try again.')
+  let text: string
+  try {
+    text = await attempt()
+  } catch (e) {
+    const retryable =
+      e instanceof TypeError || // fetch itself rejected (network error)
+      (e instanceof Error && (e as Error & { retryable?: boolean }).retryable === true)
+    if (!retryable) throw e
+    await new Promise((r) => setTimeout(r, 1500))
+    text = await attempt()
   }
-  return JSON.parse(text) as AssayResult
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error('The model returned malformed JSON. Run the assay again.')
+  }
+  return validateAssayResult(parsed)
 }

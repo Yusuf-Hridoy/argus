@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { AssayResult } from '../types/assay'
+import { cardClass, microLabel } from '../lib/ui'
 
-const labelClass =
-  'font-mono text-[11px] uppercase tracking-[0.18em] text-[#8a8371]'
+const labelClass = microLabel
 
 const VERDICT_STYLES: Record<AssayResult['verdict'], string> = {
   'STRONG MATCH': 'bg-[#e3ecda] text-[#3d5a2e] border-[#b9cba6]',
@@ -19,7 +19,7 @@ export default function ScoreCard({ result }: { result: AssayResult }) {
   }, [])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#d8d1bf] bg-[#faf7f0] shadow-[0_1px_2px_rgba(40,35,25,0.06),0_8px_24px_rgba(40,35,25,0.06)]">
+    <div className={`overflow-hidden ${cardClass}`}>
       {/* HEADER STRIP */}
       <div className="flex items-center justify-between border-b border-[#e2dccb] px-6 py-3">
         <div className="flex items-center gap-2">
