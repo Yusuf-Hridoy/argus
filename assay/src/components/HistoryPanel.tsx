@@ -168,6 +168,11 @@ export default function HistoryPanel({
                           </span>
                           <span className="mx-0 shrink-0">·</span>
                           <span className="shrink-0">{relativeDate(item.createdAt)}</span>
+                          {item.rerunOf && (
+                            <span className="shrink-0 font-mono text-[10px] text-[#8a8371]">
+                              · re-run
+                            </span>
+                          )}
                           <span className="shrink-0">·</span>
                           <StatusPill
                             compact

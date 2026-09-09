@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { KeyRound, ShieldCheck } from 'lucide-react'
+import { KeyRound, RefreshCw, ShieldCheck } from 'lucide-react'
 import InputPanel from './components/InputPanel'
 import ScoreCard from './components/ScoreCard'
 import PackageTabs from './components/PackageTabs'
@@ -8,6 +8,8 @@ import ProviderManager from './components/ProviderManager'
 import NotesCard from './components/NotesCard'
 import StatusPill from './components/StatusPill'
 import TrackerStats from './components/TrackerStats'
+import InsightsPanel from './components/InsightsPanel'
+import RerunDiff, { type RerunDiff as RerunDiffData } from './components/RerunDiff'
 import { runAssay } from './lib/runAssay'
 import {
   loadActiveProvider,
@@ -62,6 +64,7 @@ export default function App() {
   const [history, setHistory] = useState<SavedAssay[]>(() => listAssays())
   const [activeId, setActiveId] = useState<string | null>(null)
   const [justRan, setJustRan] = useState(false)
+  const [rerunDiff, setRerunDiff] = useState<RerunDiffData | null>(null)
   const intervalRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -124,10 +127,11 @@ export default function App() {
     'Fact-checker verifying every claim…',
   ]
 
-  const onRun = () => {
+  const startRun = (jd: string, base?: SavedAssay) => {
     setLoading(true)
     setError(null)
     setFallbackInfo(null)
+    setRerunDiff(null)
     let i = 0
     setLoadingStage(STAGES[0])
     const iv = setInterval(() => {
@@ -138,7 +142,7 @@ export default function App() {
     runAssay(activeProvider, keys, resume, jd)
       .then((outcome) => {
         try {
-          const saved = saveAssay(jd, outcome.result)
+          const saved = saveAssay(jd, outcome.result, base?.id)
           setHistory(listAssays())
           setActiveId(saved.id)
           setWarning(null)
@@ -153,6 +157,27 @@ export default function App() {
             used: PROVIDERS[outcome.usedProvider].label,
           })
         }
+        if (base) {
+          const prev = new Map(
+            base.result.dimensions.map((d) => [d.label, d.score]),
+          )
+          setRerunDiff({
+            fromScore: base.result.overallScore,
+            toScore: outcome.result.overallScore,
+            dimensions: outcome.result.dimensions
+              .map((d) => {
+                const from = prev.get(d.label)
+                return from === undefined
+                  ? null
+                  : { label: d.label, delta: d.score - from }
+              })
+              .filter(
+                (d): d is { label: string; delta: number } =>
+                  d !== null && Math.abs(d.delta) >= 3,
+              ),
+          })
+          setJd(base.jd)
+        }
         setJustRan(true)
         setResult(outcome.result)
       })
@@ -164,7 +189,12 @@ export default function App() {
       })
   }
 
+  const onRun = () => startRun(jd)
+
+  const handleRerun = (base: SavedAssay) => startRun(base.jd, base)
+
   const onOpenHistory = (item: SavedAssay) => {
+    if (item.id !== activeId) setRerunDiff(null)
     setResult(item.result)
     setJd(item.jd)
     setActiveId(item.id)
@@ -181,6 +211,7 @@ export default function App() {
     if (id === activeId) {
       setActiveId(null)
       setResult(null)
+      setRerunDiff(null)
     }
   }
 
@@ -188,6 +219,7 @@ export default function App() {
     setResult(null)
     setActiveId(null)
     setJustRan(false)
+    setRerunDiff(null)
   }
 
   const handleStatusChange = (id: string, status: AppStatus) => {
@@ -290,6 +322,7 @@ export default function App() {
               onDelete={onDeleteHistory}
               onStatusChange={handleStatusChange}
             />
+            <InsightsPanel items={history} />
           </div>
           <div className="flex flex-col gap-6">
             {error && !loading && (
@@ -326,6 +359,22 @@ export default function App() {
                       onChange={(s) => handleStatusChange(activeAssay.id, s)}
                     />
                   )}
+                  {activeAssay && !justRan && (
+                    <button
+                      type="button"
+                      onClick={() => handleRerun(activeAssay)}
+                      disabled={loading || resume.trim().length < 100}
+                      title={
+                        resume.trim().length < 100
+                          ? 'Save a master resume first'
+                          : undefined
+                      }
+                      className="flex items-center gap-1.5 rounded-md py-1 text-[12px] text-[#8a8371] transition-colors hover:text-[#26221b] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Re-run with current resume
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={onCloseViewing}
@@ -336,6 +385,7 @@ export default function App() {
                 </div>
               </div>
             )}
+            {rerunDiff && !loading && result && <RerunDiff diff={rerunDiff} />}
             {loading ? (
               <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-[#cfc7b2] bg-[#faf7f0]/40 px-8">
                 <div className="flex flex-col items-center gap-5">

@@ -1,6 +1,11 @@
 export interface Dimension { label: string; score: number; note?: string }
 export interface Reviewer { role: 'RECRUITER' | 'HIRING MGR' | 'FACT-CHECK'; title: string; comment: string }
 export interface FormAnswer { question: string; answer: string }
+export interface SkillSignal {
+  skill: string
+  demand: 'REQUIRED' | 'PREFERRED'
+  evidence: 'STRONG' | 'WEAK' | 'MISSING'
+}
 export interface AssayResult {
   roleTitle: string
   company: string
@@ -13,4 +18,5 @@ export interface AssayResult {
   tailoredCv: string
   coverLetter: string
   formAnswers: FormAnswer[]
+  signals: SkillSignal[]
 }

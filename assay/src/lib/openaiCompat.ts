@@ -16,6 +16,7 @@ const JSON_SHAPE_ADDENDUM = `Respond with ONLY a single JSON object, no markdown
   "tailoredCv": string (markdown),
   "coverLetter": string,
   "formAnswers": [ { "question": string, "answer": string } ]  // exactly 3
+  "signals": [ { "skill": string (1-4 words), "demand": "REQUIRED" | "PREFERRED", "evidence": "STRONG" | "WEAK" | "MISSING" } ]  // 8-14 entries, concrete skills/tools only, no soft skills
 }`
 
 export async function openaiCompatAssay(

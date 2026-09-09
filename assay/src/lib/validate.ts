@@ -1,4 +1,4 @@
-import type { AssayResult, Reviewer } from '../types/assay'
+import type { AssayResult, Reviewer, SkillSignal } from '../types/assay'
 
 const VERDICTS: AssayResult['verdict'][] = [
   'STRONG MATCH',
@@ -96,6 +96,34 @@ export function validateAssayResult(obj: unknown): AssayResult {
         .map((f) => ({ question: f.question, answer: f.answer }))
     : []
 
+  const signals: SkillSignal[] = []
+  if (Array.isArray(raw.signals)) {
+    const seen = new Set<string>()
+    for (const s of raw.signals) {
+      if (signals.length >= 20) break
+      if (typeof s !== 'object' || s === null) continue
+      const rawSkill = (s as { skill?: unknown }).skill
+      if (typeof rawSkill !== 'string') continue
+      const skill = rawSkill.trim().slice(0, 40)
+      if (!skill) continue
+      const key = skill.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      const demand = (s as { demand?: unknown }).demand
+      const evidence = (s as { evidence?: unknown }).evidence
+      signals.push({
+        skill,
+        demand: demand === 'REQUIRED' ? 'REQUIRED' : 'PREFERRED',
+        evidence:
+          evidence === 'STRONG'
+            ? 'STRONG'
+            : evidence === 'MISSING'
+              ? 'MISSING'
+              : 'WEAK',
+      })
+    }
+  }
+
   return {
     roleTitle,
     company,
@@ -108,5 +136,6 @@ export function validateAssayResult(obj: unknown): AssayResult {
     tailoredCv,
     coverLetter,
     formAnswers,
+    signals,
   }
 }

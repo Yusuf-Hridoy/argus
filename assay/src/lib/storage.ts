@@ -10,6 +10,7 @@ export interface SavedAssay {
   status: AppStatus
   notes: string
   appliedAt?: number
+  rerunOf?: string
 }
 
 export const STATUS_ORDER: AppStatus[] = [
@@ -85,7 +86,11 @@ export function listAssays(): SavedAssay[] {
   return read()
 }
 
-export function saveAssay(jd: string, result: AssayResult): SavedAssay {
+export function saveAssay(
+  jd: string,
+  result: AssayResult,
+  rerunOf?: string,
+): SavedAssay {
   const saved: SavedAssay = {
     id: crypto.randomUUID(),
     createdAt: Date.now(),
@@ -93,6 +98,7 @@ export function saveAssay(jd: string, result: AssayResult): SavedAssay {
     result,
     status: 'SAVED',
     notes: '',
+    rerunOf,
   }
   const list = [saved, ...read()].slice(0, MAX_ENTRIES)
   writeQuotaSafe(list)
