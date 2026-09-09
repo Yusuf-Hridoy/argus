@@ -1,14 +1,44 @@
 import type { AssayResult } from '../types/assay'
 
+export type AppStatus = 'SAVED' | 'APPLIED' | 'INTERVIEW' | 'OFFER' | 'REJECTED'
+
 export interface SavedAssay {
   id: string
   createdAt: number
   jd: string
   result: AssayResult
+  status: AppStatus
+  notes: string
+  appliedAt?: number
+}
+
+export const STATUS_ORDER: AppStatus[] = [
+  'SAVED',
+  'APPLIED',
+  'INTERVIEW',
+  'OFFER',
+  'REJECTED',
+]
+
+export const STATUS_LABELS: Record<AppStatus, string> = {
+  SAVED: 'Saved',
+  APPLIED: 'Applied',
+  INTERVIEW: 'Interview',
+  OFFER: 'Offer',
+  REJECTED: 'Rejected',
 }
 
 const KEY = 'assay.history'
 const MAX_ENTRIES = 50
+
+function migrate(e: SavedAssay): SavedAssay {
+  const status = STATUS_ORDER.includes(e.status) ? e.status : 'SAVED'
+  return {
+    ...e,
+    status,
+    notes: typeof e.notes === 'string' ? e.notes : '',
+  }
+}
 
 function read(): SavedAssay[] {
   try {
@@ -16,15 +46,17 @@ function read(): SavedAssay[] {
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (e): e is SavedAssay =>
-        typeof e === 'object' &&
-        e !== null &&
-        typeof (e as SavedAssay).id === 'string' &&
-        typeof (e as SavedAssay).createdAt === 'number' &&
-        typeof (e as SavedAssay).result === 'object' &&
-        (e as SavedAssay).result !== null,
-    )
+    return parsed
+      .filter(
+        (e): e is SavedAssay =>
+          typeof e === 'object' &&
+          e !== null &&
+          typeof (e as SavedAssay).id === 'string' &&
+          typeof (e as SavedAssay).createdAt === 'number' &&
+          typeof (e as SavedAssay).result === 'object' &&
+          (e as SavedAssay).result !== null,
+      )
+      .map(migrate)
   } catch {
     return []
   }
@@ -34,18 +66,7 @@ function write(list: SavedAssay[]): void {
   localStorage.setItem(KEY, JSON.stringify(list))
 }
 
-export function listAssays(): SavedAssay[] {
-  return read()
-}
-
-export function saveAssay(jd: string, result: AssayResult): SavedAssay {
-  const saved: SavedAssay = {
-    id: crypto.randomUUID(),
-    createdAt: Date.now(),
-    jd,
-    result,
-  }
-  const list = [saved, ...read()].slice(0, MAX_ENTRIES)
+function writeQuotaSafe(list: SavedAssay[]): void {
   try {
     write(list)
   } catch {
@@ -58,7 +79,40 @@ export function saveAssay(jd: string, result: AssayResult): SavedAssay {
       )
     }
   }
+}
+
+export function listAssays(): SavedAssay[] {
+  return read()
+}
+
+export function saveAssay(jd: string, result: AssayResult): SavedAssay {
+  const saved: SavedAssay = {
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+    jd,
+    result,
+    status: 'SAVED',
+    notes: '',
+  }
+  const list = [saved, ...read()].slice(0, MAX_ENTRIES)
+  writeQuotaSafe(list)
   return saved
+}
+
+export function updateAssay(
+  id: string,
+  patch: Partial<Pick<SavedAssay, 'status' | 'notes'>>,
+): SavedAssay | undefined {
+  const list = read()
+  const index = list.findIndex((e) => e.id === id)
+  if (index === -1) return undefined
+  const entry = { ...list[index], ...patch }
+  if (patch.status === 'APPLIED' && entry.appliedAt === undefined) {
+    entry.appliedAt = Date.now()
+  }
+  list[index] = entry
+  writeQuotaSafe(list)
+  return entry
 }
 
 export function deleteAssay(id: string): void {

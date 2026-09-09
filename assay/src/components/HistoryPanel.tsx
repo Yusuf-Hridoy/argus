@@ -1,13 +1,20 @@
 import { useState } from 'react'
 import { ChevronDown, Trash2 } from 'lucide-react'
-import type { SavedAssay } from '../lib/storage'
+import {
+  STATUS_LABELS,
+  STATUS_ORDER,
+  type AppStatus,
+  type SavedAssay,
+} from '../lib/storage'
 import { cardClass, microLabel } from '../lib/ui'
+import StatusPill from './StatusPill'
 
 interface HistoryPanelProps {
   items: SavedAssay[]
   activeId: string | null
   onOpen: (item: SavedAssay) => void
   onDelete: (id: string) => void
+  onStatusChange: (id: string, status: AppStatus) => void
 }
 
 const VERDICT_DOTS: Record<string, string> = {
@@ -34,17 +41,38 @@ export default function HistoryPanel({
   activeId,
   onOpen,
   onDelete,
+  onStatusChange,
 }: HistoryPanelProps) {
   const [open, setOpen] = useState(true)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<AppStatus | 'ALL'>('ALL')
+
+  const filtered = filter === 'ALL' ? items : items.filter((i) => i.status === filter)
 
   return (
     <div className={cardClass}>
-      <div className="flex items-center justify-between border-b border-[#e2dccb] px-5 py-4">
+      <div className="flex items-center justify-between gap-2 border-b border-[#e2dccb] px-5 py-4">
         <span className={microLabel}>History</span>
         <div className="flex items-center gap-2">
-          <span className="text-[12px] text-[#8a8371]">
-            {items.length} saved
+          {items.length > 0 && (
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as AppStatus | 'ALL')}
+              aria-label="Filter by status"
+              className="rounded-md border border-[#e2dccb] bg-[#f2eee2]/50 px-2 py-1 text-[11.5px] text-[#6f6858] focus:outline-none"
+            >
+              <option value="ALL">All</option>
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          )}
+          <span className="shrink-0 text-[12px] text-[#8a8371]">
+            {filter === 'ALL'
+              ? `${items.length} saved`
+              : `${filtered.length}/${items.length} shown`}
           </span>
           <button
             type="button"
@@ -65,9 +93,13 @@ export default function HistoryPanel({
             <p className="px-2 py-3 text-[13px] text-[#8a8371]">
               Your saved assays will appear here after your first run.
             </p>
+          ) : filtered.length === 0 ? (
+            <p className="px-2 py-3 text-[13px] text-[#8a8371]">
+              No assays with this status yet.
+            </p>
           ) : (
-            <div className={items.length > 8 ? 'max-h-[360px] overflow-y-auto' : ''}>
-              {items.map((item, i) => {
+            <div className={filtered.length > 8 ? 'max-h-[360px] overflow-y-auto' : ''}>
+              {filtered.map((item, i) => {
                 const active = item.id === activeId
                 const confirming = item.id === confirmingId
                 return (
@@ -123,7 +155,7 @@ export default function HistoryPanel({
                             </span>
                           </span>
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-[#8a8371]">
+                        <div className="mt-1 flex items-center gap-2 text-[12.5px] text-[#8a8371]">
                           <span
                             className="h-2.5 w-2.5 shrink-0 rounded-full"
                             style={{
@@ -131,16 +163,22 @@ export default function HistoryPanel({
                                 VERDICT_DOTS[item.result.verdict] ?? '#c9962e',
                             }}
                           />
-                          <span className="truncate">
+                          <span className="min-w-0 flex-1 truncate">
                             {item.result.company}
-                            <span className="mx-1">·</span>
-                            {relativeDate(item.createdAt)}
                           </span>
+                          <span className="mx-0 shrink-0">·</span>
+                          <span className="shrink-0">{relativeDate(item.createdAt)}</span>
+                          <span className="shrink-0">·</span>
+                          <StatusPill
+                            compact
+                            status={item.status}
+                            onChange={(s) => onStatusChange(item.id, s)}
+                          />
                           <span
                             role="button"
                             tabIndex={0}
                             aria-label="Delete this assay"
-                            className="ml-auto shrink-0 rounded p-0.5 text-[#8a8371] transition-colors hover:text-[#b3492b]"
+                            className="shrink-0 rounded p-1 text-[#8a8371] transition-colors hover:text-[#b3492b]"
                             onClick={(e) => {
                               e.stopPropagation()
                               setConfirmingId(item.id)

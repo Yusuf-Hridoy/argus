@@ -5,6 +5,9 @@ import ScoreCard from './components/ScoreCard'
 import PackageTabs from './components/PackageTabs'
 import HistoryPanel from './components/HistoryPanel'
 import ProviderManager from './components/ProviderManager'
+import NotesCard from './components/NotesCard'
+import StatusPill from './components/StatusPill'
+import TrackerStats from './components/TrackerStats'
 import { runAssay } from './lib/runAssay'
 import {
   loadActiveProvider,
@@ -14,7 +17,13 @@ import {
   saveKeys,
   type ProviderId,
 } from './lib/providers'
-import { listAssays, saveAssay, deleteAssay } from './lib/storage'
+import {
+  listAssays,
+  saveAssay,
+  deleteAssay,
+  updateAssay,
+  type AppStatus,
+} from './lib/storage'
 import type { SavedAssay } from './lib/storage'
 import { cardClass, microLabel } from './lib/ui'
 import type { AssayResult } from './types/assay'
@@ -181,6 +190,18 @@ export default function App() {
     setJustRan(false)
   }
 
+  const handleStatusChange = (id: string, status: AppStatus) => {
+    updateAssay(id, { status })
+    setHistory(listAssays())
+  }
+
+  const handleNotesChange = (id: string, notes: string) => {
+    updateAssay(id, { notes })
+    setHistory(listAssays())
+  }
+
+  const activeAssay = history.find((h) => h.id === activeId) ?? null
+
   const hasAnyKey = Boolean(keys.gemini || keys.groq || keys.cerebras)
   const viewingSaved = activeId !== null && result !== null
   const savedItem = viewingSaved ? history.find((h) => h.id === activeId) : undefined
@@ -261,11 +282,13 @@ export default function App() {
               canRun={canRun}
               onRun={onRun}
             />
+            <TrackerStats items={history} />
             <HistoryPanel
               items={history}
               activeId={activeId}
               onOpen={onOpenHistory}
               onDelete={onDeleteHistory}
+              onStatusChange={handleStatusChange}
             />
           </div>
           <div className="flex flex-col gap-6">
@@ -296,13 +319,21 @@ export default function App() {
                         savedItem ? relativeDate(savedItem.createdAt) : ''
                       }`}
                 </span>
-                <button
-                  type="button"
-                  onClick={onCloseViewing}
-                  className="text-[12.5px] text-[#8a8371] transition-colors hover:text-[#26221b]"
-                >
-                  Close
-                </button>
+                <div className="flex items-center gap-3">
+                  {activeAssay && (
+                    <StatusPill
+                      status={activeAssay.status}
+                      onChange={(s) => handleStatusChange(activeAssay.id, s)}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={onCloseViewing}
+                    className="text-[12.5px] text-[#8a8371] transition-colors hover:text-[#26221b]"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             )}
             {loading ? (
@@ -321,6 +352,13 @@ export default function App() {
               <>
                 <ScoreCard result={result} />
                 <PackageTabs result={result} />
+                {activeAssay && (
+                  <NotesCard
+                    key={activeAssay.id}
+                    assay={activeAssay}
+                    onSave={handleNotesChange}
+                  />
+                )}
               </>
             ) : error ? null : (
               <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-[#cfc7b2] bg-[#faf7f0]/40 px-8">
