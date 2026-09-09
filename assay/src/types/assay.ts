@@ -20,3 +20,17 @@ export interface AssayResult {
   formAnswers: FormAnswer[]
   signals: SkillSignal[]
 }
+
+export type PrepCategory = 'GAP_PROBE' | 'TECHNICAL' | 'DOMAIN' | 'BEHAVIORAL'
+export type PrepConfidence = 'READY' | 'PRACTICE' | 'RISKY'
+export interface PrepQuestion {
+  question: string
+  category: PrepCategory
+  whyAsked: string
+  answer: string
+  confidence: PrepConfidence
+}
+export interface InterviewPrep {
+  generatedAt: number
+  questions: PrepQuestion[]
+}

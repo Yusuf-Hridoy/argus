@@ -19,6 +19,25 @@ const JSON_SHAPE_ADDENDUM = `Respond with ONLY a single JSON object, no markdown
   "signals": [ { "skill": string (1-4 words), "demand": "REQUIRED" | "PREFERRED", "evidence": "STRONG" | "WEAK" | "MISSING" } ]  // 8-14 entries, concrete skills/tools only, no soft skills
 }`
 
+export function extractJson(text: string): unknown {
+  let cleaned = text.trim()
+  cleaned = cleaned
+    .replace(/^```(?:json)?\s*\n?/i, '')
+    .replace(/\n?```\s*$/i, '')
+  if (!cleaned.startsWith('{')) {
+    const first = cleaned.indexOf('{')
+    const last = cleaned.lastIndexOf('}')
+    if (first !== -1 && last !== -1 && last > first) {
+      cleaned = cleaned.slice(first, last + 1)
+    }
+  }
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    throw new Error('The model returned malformed JSON. Run the assay again.')
+  }
+}
+
 export async function openaiCompatAssay(
   info: ProviderInfo,
   apiKey: string,
@@ -79,21 +98,5 @@ export async function openaiCompatAssay(
     throw new Error('The model returned an empty response. Try again.')
   }
 
-  let text = content.trim()
-  text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '')
-  if (!text.startsWith('{')) {
-    const first = text.indexOf('{')
-    const last = text.lastIndexOf('}')
-    if (first !== -1 && last !== -1 && last > first) {
-      text = text.slice(first, last + 1)
-    }
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(text)
-  } catch {
-    throw new Error('The model returned malformed JSON. Run the assay again.')
-  }
-  return validateAssayResult(parsed)
+  return validateAssayResult(extractJson(content))
 }

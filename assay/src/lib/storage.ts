@@ -1,4 +1,4 @@
-import type { AssayResult } from '../types/assay'
+import type { AssayResult, InterviewPrep } from '../types/assay'
 
 export type AppStatus = 'SAVED' | 'APPLIED' | 'INTERVIEW' | 'OFFER' | 'REJECTED'
 
@@ -11,6 +11,7 @@ export interface SavedAssay {
   notes: string
   appliedAt?: number
   rerunOf?: string
+  prep?: InterviewPrep
 }
 
 export const STATUS_ORDER: AppStatus[] = [
@@ -34,11 +35,18 @@ const MAX_ENTRIES = 50
 
 function migrate(e: SavedAssay): SavedAssay {
   const status = STATUS_ORDER.includes(e.status) ? e.status : 'SAVED'
-  return {
+  const migrated: SavedAssay = {
     ...e,
     status,
     notes: typeof e.notes === 'string' ? e.notes : '',
   }
+  if (
+    migrated.prep &&
+    (!Array.isArray(migrated.prep.questions) || migrated.prep.questions.length === 0)
+  ) {
+    delete migrated.prep
+  }
+  return migrated
 }
 
 function read(): SavedAssay[] {
@@ -107,7 +115,7 @@ export function saveAssay(
 
 export function updateAssay(
   id: string,
-  patch: Partial<Pick<SavedAssay, 'status' | 'notes'>>,
+  patch: Partial<Pick<SavedAssay, 'status' | 'notes' | 'prep'>>,
 ): SavedAssay | undefined {
   const list = read()
   const index = list.findIndex((e) => e.id === id)

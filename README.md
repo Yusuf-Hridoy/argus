@@ -19,6 +19,7 @@ Assay takes any job description and your one master resume, and produces a compl
 - One structured call to Gemini builds the full package — CV, cover letter, and form answers.
 - The package is scored 0–100 across five dimensions and reviewed by the three-person panel, then auto-saved to your local history — where each saved assay becomes a tracked application: set its status (Saved → Applied → Interview → Offer / Rejected), keep private notes on it, and watch your pipeline stats at a glance.
 - Across all saved assays, an Insights panel shows what the market keeps demanding and where your evidence is repeatedly weak — and after you improve your resume, one click re-runs any old JD to prove the score moved.
+- For any saved assay, generate an interview prep pack: the questions this exact JD makes likely — including probes at your weak spots — with honest STAR answers drawn only from your real resume, plus a flashcard practice mode.
 
 ## Privacy
 
@@ -43,5 +44,5 @@ Then get a free API key from any of Google AI Studio (Gemini), Groq Console, or 
 - [x] Application tracker (statuses, notes, stats)
 - [x] Gap intelligence across saved assays
 - [x] Resume version diffing
-- [ ] Interview prep from any saved assay
+- [x] Interview prep from any saved assay
 - [ ] Test suite + CI

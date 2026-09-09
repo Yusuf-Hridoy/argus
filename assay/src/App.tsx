@@ -6,6 +6,7 @@ import PackageTabs from './components/PackageTabs'
 import HistoryPanel from './components/HistoryPanel'
 import ProviderManager from './components/ProviderManager'
 import NotesCard from './components/NotesCard'
+import PrepCard from './components/PrepCard'
 import StatusPill from './components/StatusPill'
 import TrackerStats from './components/TrackerStats'
 import InsightsPanel from './components/InsightsPanel'
@@ -402,6 +403,19 @@ export default function App() {
               <>
                 <ScoreCard result={result} />
                 <PackageTabs result={result} />
+                {activeAssay && (
+                  <PrepCard
+                    key={activeAssay.id}
+                    assay={activeAssay}
+                    resume={resume}
+                    activeProvider={activeProvider}
+                    keys={keys}
+                    onPrepSaved={(id, prep) => {
+                      updateAssay(id, { prep })
+                      setHistory(listAssays())
+                    }}
+                  />
+                )}
                 {activeAssay && (
                   <NotesCard
                     key={activeAssay.id}
