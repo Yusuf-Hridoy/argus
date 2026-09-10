@@ -37,7 +37,7 @@ npm install
 npm run dev
 ```
 
-Then get a free API key from any of Google AI Studio (Gemini), Groq Console, or Cerebras Cloud and add it via the key button in the app header. Add one or more keys — with multiple keys saved, Assay fails over automatically when one provider is rate-limited.
+Then add an API key from any of Gemini, Groq, OpenAI, or Claude via the key button in the app header — Gemini and Groq have free tiers; OpenAI and Claude are paid per use. Add one or more keys — with multiple keys saved, Assay fails over automatically when one provider is rate-limited.
 
 ## Roadmap
 

@@ -1,12 +1,14 @@
 import type { AssayResult } from '../types/assay'
-import { assayApplication } from './gemini'
-import { openaiCompatAssay } from './openaiCompat'
+import { anthropicJson } from './anthropic'
+import { assayApplication, SYSTEM_PROMPT } from './gemini'
+import { JSON_SHAPE_ADDENDUM, openaiCompatAssay } from './openaiCompat'
 import {
   PROVIDERS,
   PROVIDER_ORDER,
   RateLimitError,
   type ProviderId,
 } from './providers'
+import { validateAssayResult } from './validate'
 
 export interface RunOutcome {
   result: AssayResult
@@ -26,10 +28,17 @@ export async function runAssay(
 ): Promise<RunOutcome> {
   const callOne = (id: ProviderId): Promise<AssayResult> => {
     const key = keys[id]!
-    if (PROVIDERS[id].kind === 'gemini') {
+    const info = PROVIDERS[id]
+    if (info.kind === 'gemini') {
       return assayApplication(key, resume, jd)
     }
-    return openaiCompatAssay(PROVIDERS[id], key, resume, jd)
+    if (info.kind === 'anthropic') {
+      const system = SYSTEM_PROMPT + '\n\n' + JSON_SHAPE_ADDENDUM
+      const user =
+        'MASTER RESUME:\n' + resume + '\n\n---\n\nJOB DESCRIPTION:\n' + jd
+      return anthropicJson(key, info.model, system, user).then(validateAssayResult)
+    }
+    return openaiCompatAssay(info, key, resume, jd)
   }
 
   try {
@@ -42,7 +51,7 @@ export async function runAssay(
       (id) => id !== active && keys[id]?.trim(),
     )
     if (!fallbackId) {
-      const hint = ' Add a Groq or Cerebras key for automatic failover.'
+      const hint = ' Add another provider key for automatic failover.'
       if (e instanceof RateLimitError && !e.message.includes(hint.trim())) {
         e.message = e.message + hint
       }

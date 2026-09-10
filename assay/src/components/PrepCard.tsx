@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ChevronDown,
   ChevronLeft,
@@ -95,6 +95,8 @@ export default function PrepCard({
   onPrepSaved,
 }: PrepCardProps) {
   const prep = assay.prep
+  const rootRef = useRef<HTMLDivElement>(null)
+  const prevPrepRef = useRef(prep)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ from: string; used: string } | null>(null)
@@ -108,6 +110,7 @@ export default function PrepCard({
   const [revealed, setRevealed] = useState(false)
 
   const generate = () => {
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     setGenerating(true)
     setError(null)
     setNotice(null)
@@ -129,6 +132,14 @@ export default function PrepCard({
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setGenerating(false))
   }
+
+  // scroll once when a generation (or regeneration) lands — never on mere open
+  useEffect(() => {
+    if (prep && prep !== prevPrepRef.current) {
+      rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    prevPrepRef.current = prep
+  }, [prep])
 
   const nav = (dir: number) => {
     setCurrent((c) => (c + dir + order.length) % order.length)
@@ -172,7 +183,7 @@ export default function PrepCard({
     mode === 'cards' ? questions[order[current]] : undefined
 
   return (
-    <div className={cardClass}>
+    <div ref={rootRef} className={cardClass}>
       <div className="flex items-center justify-between gap-2 border-b border-[#e2dccb] px-5 py-4">
         <div className="flex min-w-0 items-center gap-2">
           <span className={microLabel}>Interview prep</span>

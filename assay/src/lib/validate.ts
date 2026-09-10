@@ -19,14 +19,30 @@ function asScore(v: unknown): number {
   return Math.min(100, Math.max(0, Math.round(n)))
 }
 
+/** Repairs double-escaped control sequences from providers without strict JSON modes.
+ *  Only rewrites when the string clearly exhibits the bug, so legitimate content
+ *  that happens to mention "\n" (e.g. a code snippet in a cover letter) survives. */
+export function unescapeArtifacts(s: string): string {
+  if (!s.includes('\\n')) return s
+  const literal = (s.match(/\\n/g) ?? []).length
+  const real = (s.match(/\n/g) ?? []).length
+  // Bug signature: literal \n sequences dominate real newlines.
+  if (literal <= real) return s
+  return s
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '  ')
+    .replace(/\\"/g, '"')
+}
+
 export function validateAssayResult(obj: unknown): AssayResult {
   if (typeof obj !== 'object' || obj === null) {
     throw new Error('The model returned an unusable response. Run the assay again.')
   }
   const raw = obj as Record<string, unknown>
 
-  const tailoredCv = asString(raw.tailoredCv)
-  const coverLetter = asString(raw.coverLetter)
+  const tailoredCv = unescapeArtifacts(asString(raw.tailoredCv))
+  const coverLetter = unescapeArtifacts(asString(raw.coverLetter))
   if (!tailoredCv.trim() && !coverLetter.trim()) {
     throw new Error('The model returned an unusable response. Run the assay again.')
   }
@@ -66,7 +82,7 @@ export function validateAssayResult(obj: unknown): AssayResult {
         .map((r) => ({
           role: r.role,
           title: asString(r.title),
-          comment: r.comment,
+          comment: unescapeArtifacts(r.comment),
         }))
     : []
   for (const role of REVIEWER_ROLES) {
@@ -93,7 +109,10 @@ export function validateAssayResult(obj: unknown): AssayResult {
             typeof (f as { answer?: unknown }).answer === 'string' &&
             (f as { answer: string }).answer.trim() !== '',
         )
-        .map((f) => ({ question: f.question, answer: f.answer }))
+        .map((f) => ({
+          question: unescapeArtifacts(f.question),
+          answer: unescapeArtifacts(f.answer),
+        }))
     : []
 
   const signals: SkillSignal[] = []
@@ -127,10 +146,10 @@ export function validateAssayResult(obj: unknown): AssayResult {
   return {
     roleTitle,
     company,
-    companyContext: asString(raw.companyContext),
+    companyContext: unescapeArtifacts(asString(raw.companyContext)),
     verdict,
     overallScore: asScore(raw.overallScore),
-    summary: asString(raw.summary),
+    summary: unescapeArtifacts(asString(raw.summary)),
     dimensions,
     reviewers,
     tailoredCv,

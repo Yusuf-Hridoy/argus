@@ -3,7 +3,7 @@ import { SYSTEM_PROMPT } from './gemini'
 import { RateLimitError, type ProviderInfo } from './providers'
 import { validateAssayResult } from './validate'
 
-const JSON_SHAPE_ADDENDUM = `Respond with ONLY a single JSON object, no markdown fences, no commentary, matching exactly this shape:
+export const JSON_SHAPE_ADDENDUM = `Respond with ONLY a single JSON object, no markdown fences, no commentary, matching exactly this shape:
 {
   "roleTitle": string,
   "company": string,
@@ -52,7 +52,8 @@ export async function openaiCompatAssay(
     },
     body: JSON.stringify({
       model: info.model,
-      temperature: 0.4,
+      // GPT-5.x rejects a non-default temperature with a 400
+      ...(info.id === 'openai' ? {} : { temperature: 0.4 }),
       response_format: { type: 'json_object' },
       messages: [
         {

@@ -60,12 +60,12 @@ export default function ProviderManager({
     <div className={`${cardClass} w-96 p-5`}>
       <h3 className="text-[14px] font-semibold">AI providers</h3>
       <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#8a8371]">
-        Keys are stored only in this browser. The active provider runs your
-        assays; if it's rate-limited, Assay automatically retries on another
-        provider you've added.
+        Keys are stored only in this browser. Gemini and Groq keys are free;
+        OpenAI and Claude are paid per use. If the active provider is
+        rate-limited, Assay retries on another provider you've added.
       </p>
 
-      <div>
+      <div className="max-h-[60vh] overflow-y-auto">
         {PROVIDER_ORDER.map((id, i) => {
           const info = PROVIDERS[id]
           const hasKey = Boolean(keys[id])
@@ -110,7 +110,7 @@ export default function ProviderManager({
                     rel="noreferrer"
                     className="text-[12px] text-[#b3492b] underline underline-offset-2"
                   >
-                    Get free key
+                    {info.keyLinkText}
                   </a>
                 )}
               </div>

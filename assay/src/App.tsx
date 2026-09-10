@@ -235,7 +235,7 @@ export default function App() {
 
   const activeAssay = history.find((h) => h.id === activeId) ?? null
 
-  const hasAnyKey = Boolean(keys.gemini || keys.groq || keys.cerebras)
+  const hasAnyKey = Boolean(keys.gemini || keys.groq || keys.openai || keys.anthropic)
   const viewingSaved = activeId !== null && result !== null
   const savedItem = viewingSaved ? history.find((h) => h.id === activeId) : undefined
 
@@ -431,7 +431,7 @@ export default function App() {
                   <p className="text-[14px] leading-relaxed text-[#8a8371]">
                     {hasAnyKey
                       ? 'Your graded package will appear here — match score, dimension assay, and the three-reviewer panel.'
-                      : 'Add an API key first (top right) — Gemini, Groq, or Cerebras — then paste a job description and run your first assay.'}
+                      : 'Add an API key first (top right) — Gemini, Groq, OpenAI, or Claude — then paste a job description and run your first assay.'}
                   </p>
                 </div>
               </div>

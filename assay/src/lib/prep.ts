@@ -4,6 +4,7 @@ import type {
   PrepConfidence,
   PrepQuestion,
 } from '../types/assay'
+import { anthropicJson } from './anthropic'
 import { extractJson } from './openaiCompat'
 import {
   PROVIDERS,
@@ -12,6 +13,7 @@ import {
   type ProviderId,
 } from './providers'
 import type { SavedAssay } from './storage'
+import { unescapeArtifacts } from './validate'
 
 export const PREP_SYSTEM_PROMPT = `You are an interview preparation expert. Given a candidate's master resume, a job description, and a list of skill signals (with evidence grades), produce a realistic interview prep pack for THIS specific job.
 
@@ -122,7 +124,7 @@ async function prepGemini(
 }
 
 async function prepOpenAi(
-  id: Exclude<ProviderId, 'gemini'>,
+  id: 'groq' | 'openai',
   apiKey: string,
   assay: SavedAssay,
   resume: string,
@@ -136,7 +138,8 @@ async function prepOpenAi(
     },
     body: JSON.stringify({
       model: info.model,
-      temperature: 0.5,
+      // GPT-5.x rejects a non-default temperature with a 400
+      ...(info.id === 'openai' ? {} : { temperature: 0.5 }),
       response_format: { type: 'json_object' },
       messages: [
         {
@@ -200,12 +203,13 @@ export function validatePrep(obj: unknown): InterviewPrep {
         continue
       }
       questions.push({
-        question: r.question.trim(),
-        answer: r.answer.trim(),
+        question: unescapeArtifacts(r.question.trim()),
+        answer: unescapeArtifacts(r.answer.trim()),
         category: CATEGORIES.includes(r.category as PrepCategory)
           ? (r.category as PrepCategory)
           : 'TECHNICAL',
-        whyAsked: typeof r.whyAsked === 'string' ? r.whyAsked : '',
+        whyAsked:
+          typeof r.whyAsked === 'string' ? unescapeArtifacts(r.whyAsked) : '',
         confidence: CONFIDENCES.includes(r.confidence as PrepConfidence)
           ? (r.confidence as PrepConfidence)
           : 'PRACTICE',
@@ -238,10 +242,17 @@ export async function runPrep(
 ): Promise<PrepOutcome> {
   const callOne = (id: ProviderId): Promise<InterviewPrep> => {
     const key = keys[id]!
-    if (PROVIDERS[id].kind === 'gemini') {
+    const info = PROVIDERS[id]
+    if (info.kind === 'gemini') {
       return prepGemini(key, assay, resume)
     }
-    return prepOpenAi(id as Exclude<ProviderId, 'gemini'>, key, assay, resume)
+    if (info.kind === 'anthropic') {
+      const system = PREP_SYSTEM_PROMPT + '\n\n' + PREP_ADDENDUM
+      return anthropicJson(key, info.model, system, buildUserContent(assay, resume)).then(
+        validatePrep,
+      )
+    }
+    return prepOpenAi(id as 'groq' | 'openai', key, assay, resume)
   }
 
   try {
@@ -254,7 +265,7 @@ export async function runPrep(
       (id) => id !== active && keys[id]?.trim(),
     )
     if (!fallbackId) {
-      const hint = ' Add a Groq or Cerebras key for automatic failover.'
+      const hint = ' Add another provider key for automatic failover.'
       if (e instanceof RateLimitError && !e.message.includes(hint.trim())) {
         e.message = e.message + hint
       }
