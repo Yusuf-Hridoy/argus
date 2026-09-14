@@ -19,15 +19,13 @@ function asScore(v: unknown): number {
   return Math.min(100, Math.max(0, Math.round(n)))
 }
 
-/** Repairs double-escaped control sequences from providers without strict JSON modes.
- *  Only rewrites when the string clearly exhibits the bug, so legitimate content
- *  that happens to mention "\n" (e.g. a code snippet in a cover letter) survives. */
+/** Repairs double-escaped control sequences from providers without strict
+ *  JSON modes. Applied unconditionally: after JSON.parse, any remaining
+ *  literal \n / \t / \" two-char sequences are model escaping artifacts.
+ *  (Trade-off: content that genuinely discusses "\n" gets a real newline —
+ *  acceptable vs rendering visible artifacts.) */
 export function unescapeArtifacts(s: string): string {
-  if (!s.includes('\\n')) return s
-  const literal = (s.match(/\\n/g) ?? []).length
-  const real = (s.match(/\n/g) ?? []).length
-  // Bug signature: literal \n sequences dominate real newlines.
-  if (literal <= real) return s
+  if (!s.includes('\\')) return s
   return s
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')

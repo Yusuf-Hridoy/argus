@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { unescapeArtifacts } from './validate'
 
 /**
  * Minimal, dependency-free markdown-to-React renderer covering the narrow
@@ -14,8 +15,11 @@ import type { ReactNode } from 'react'
  * or mailto:; any other scheme (javascript:, data:, ...) renders as text.
  */
 
+// Emphasis delimiters must hug non-whitespace on the inside, so stray
+// asterisks (e.g. "20%* and reduced flaky tests*") never pair up into
+// runaway italics. `code` and link tokens are unchanged.
 const INLINE_RE =
-  /(\*\*[^*]+?\*\*|\*[^*\n]+?\*|`[^`\n]+`|\[[^\]\n]*\]\([^)\n]*\))/g
+  /(\*\*(?=\S)[^*]+?(?<=\S)\*\*|\*(?=\S)[^*\n]+?(?<=\S)\*|`[^`\n]+`|\[[^\]\n]*\]\([^)\n]*\))/g
 
 function inline(text: string, keyPrefix: string): ReactNode[] {
   const parts = text.split(INLINE_RE)
@@ -55,7 +59,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
       }
       return part
     }
-    if (/^\*[^*\n]+\*$/.test(part)) {
+    if (/^\*\S(?:[^*\n]*\S)?\*$/.test(part)) {
       return (
         <em key={key} className="italic">
           {part.slice(1, -1)}
@@ -78,7 +82,10 @@ const HR_RE = /^ {0,3}(?:---|\*\*\*|___)$/
 const HEADING_RE = /^ {0,3}(#{1,4}) ?(.*)$/
 
 export function renderMarkdown(src: string): ReactNode {
-  const lines = src
+  // Display-time safety net: entries saved while the escape-repair bug was
+  // live still hold literal \n artifacts in storage. Normalize a copy here
+  // (presentation only — Copy/download still return the stored string).
+  const lines = unescapeArtifacts(src)
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map((l) => l.replace(/\s+$/, ''))
