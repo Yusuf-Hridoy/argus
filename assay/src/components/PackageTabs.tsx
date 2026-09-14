@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, Download } from 'lucide-react'
 import type { AssayResult } from '../types/assay'
 import { cardClass } from '../lib/ui'
+import { renderMarkdown } from '../lib/markdown'
 
 type Tab = 'cv' | 'letter' | 'answers'
 
@@ -128,7 +129,7 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
       </div>
 
       {/* CONTENT AREA */}
-      <div className="max-h-[560px] overflow-y-auto px-6 py-5">
+      <div className="md-scroll max-h-[560px] overflow-y-scroll px-6 py-5">
         {tab === 'answers' ? (
           <div className="flex flex-col">
             {result.formAnswers.map((f, i) => (
@@ -143,10 +144,10 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
               </div>
             ))}
           </div>
+        ) : tab === 'cv' ? (
+          <div>{renderMarkdown(result.tailoredCv)}</div>
         ) : (
-          <pre className="whitespace-pre-wrap font-sans text-[14px] leading-relaxed text-[#3a352c]">
-            {currentText()}
-          </pre>
+          <div>{renderMarkdown(result.coverLetter)}</div>
         )}
       </div>
     </div>
