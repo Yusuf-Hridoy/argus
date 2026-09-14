@@ -5,7 +5,6 @@ import PipelineView from './views/PipelineView'
 import AppDetailView from './views/AppDetailView'
 import InsightsView from './views/InsightsView'
 import SettingsView from './views/SettingsView'
-import ProviderManager from './components/ProviderManager'
 import { runAssay } from './lib/runAssay'
 import {
   loadActiveProvider,
@@ -34,8 +33,6 @@ export default function App() {
   const [activeProvider, setActiveProvider] = useState<ProviderId>(() =>
     loadActiveProvider(loadKeys()),
   )
-  const [popoverOpen, setPopoverOpen] = useState(false)
-  const popoverRef = useRef<HTMLDivElement>(null)
 
   const [resume, setResume] = useState(() => localStorage.getItem('assay.masterResume') ?? '')
   const [resumeSaved, setResumeSaved] = useState(false)
@@ -56,17 +53,6 @@ export default function App() {
   // When a re-run completes we navigate to the new entry; the route-change
   // effect below must not wipe the fresh diff on arrival.
   const pendingDiffForRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!popoverOpen) return
-    const onDown = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setPopoverOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [popoverOpen])
 
   useEffect(() => {
     return () => {
@@ -288,35 +274,22 @@ export default function App() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="relative" ref={popoverRef}>
-              <button
-                type="button"
-                onClick={() => setPopoverOpen((o) => !o)}
-                className="flex items-center gap-2 rounded-lg border border-[#d8d1bf] bg-[#faf7f0] px-3.5 py-2 text-[13px] font-medium text-[#26221b] transition-colors hover:bg-[#f2eee2]"
-              >
-                {hasAnyKey ? (
-                  <>
-                    <span className="h-2 w-2 rounded-full bg-[#5a8a3e]" />
-                    {PROVIDERS[activeProvider].label} connected
-                  </>
-                ) : (
-                  <>
-                    <KeyRound className="h-4 w-4" />
-                    Add API key
-                  </>
-                )}
-              </button>
-              {popoverOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2">
-                  <ProviderManager
-                    keys={keys}
-                    activeProvider={activeProvider}
-                    onKeysChange={onKeysChange}
-                    onActiveChange={onActiveChange}
-                  />
-                </div>
+            <a
+              href="#/settings"
+              className="flex items-center gap-2 rounded-lg border border-[#d8d1bf] bg-[#faf7f0] px-3.5 py-2 text-[13px] font-medium text-[#26221b] transition-colors hover:bg-[#f2eee2]"
+            >
+              {hasAnyKey ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-[#5a8a3e]" />
+                  {PROVIDERS[activeProvider].label} connected
+                </>
+              ) : (
+                <>
+                  <KeyRound className="h-4 w-4" />
+                  Add API key
+                </>
               )}
-            </div>
+            </a>
             <a
               href="#/settings"
               aria-label="Settings"

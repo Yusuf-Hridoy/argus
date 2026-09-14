@@ -17,13 +17,13 @@ Assay takes any job description and your one master resume, and produces a compl
 - Save your master resume once — paste it or upload a PDF/DOCX, with text extracted entirely in your browser.
 - Paste any job description.
 - One structured call to Gemini builds the full package — CV, cover letter, and form answers.
-- The package is scored 0–100 across five dimensions and reviewed by the three-person panel, then auto-saved to your local history — where each saved assay becomes a tracked application: set its status (Saved → Applied → Interview → Offer / Rejected), keep private notes on it, and watch your pipeline stats at a glance.
+- The package is scored 0–100 across five dimensions and reviewed by the three-person panel, then auto-saved — each saved assay becomes a tracked application on the **Pipeline** page: set its status (Saved → Applied → Interview → Offer / Rejected), keep private notes on it, and watch your pipeline stats at a glance.
 - Across all saved assays, an Insights panel shows what the market keeps demanding and where your evidence is repeatedly weak — and after you improve your resume, one click re-runs any old JD to prove the score moved.
 - For any saved assay, generate an interview prep pack: the questions this exact JD makes likely — including probes at your weak spots — with honest STAR answers drawn only from your real resume, plus a flashcard practice mode.
 
 ## Privacy
 
-There is no backend. Your resume, API keys, and assay history live only in your browser's localStorage. Nothing is uploaded anywhere except the single prompt sent directly to the provider's API with your own key.
+There is no backend. Your resume, API keys, and assay history live only in your browser's localStorage. Nothing is uploaded anywhere except the single prompt sent directly to the provider's API with your own key. The Settings page can export or restore a full backup of everything — history, notes, prep, keys, resume — as one JSON file.
 
 ## Anti-fabrication
 

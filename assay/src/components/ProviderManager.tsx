@@ -6,9 +6,8 @@ import {
   type ProviderId,
 } from '../lib/providers'
 import { exportBackup, importBackup } from '../lib/backup'
-import { cardClass } from '../lib/ui'
 
-/** Temporary home for backup controls (Step 1) — moves to Settings in Step 3/4. */
+/** Backup export/import controls — rendered on the Settings page. */
 export function BackupControls() {
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -230,16 +229,6 @@ export function ProviderManagerContent({
           )
         })}
       </div>
-    </div>
-  )
-}
-
-/** Popover shell (header) — retired in Step 4 once Settings page ships. */
-export default function ProviderManager(props: ProviderManagerProps) {
-  return (
-    <div className={`${cardClass} w-96 p-5`}>
-      <ProviderManagerContent {...props} />
-      <BackupControls />
     </div>
   )
 }
