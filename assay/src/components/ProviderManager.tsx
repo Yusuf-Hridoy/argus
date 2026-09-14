@@ -1,11 +1,88 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   PROVIDER_ORDER,
   PROVIDERS,
   saveActiveProvider,
   type ProviderId,
 } from '../lib/providers'
+import { exportBackup, importBackup } from '../lib/backup'
 import { cardClass } from '../lib/ui'
+
+/** Temporary home for backup controls (Step 1) — moves to Settings in Step 3/4. */
+export function BackupControls() {
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onFileChosen = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      await importBackup(file)
+      window.location.reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setConfirming(false)
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-[#e2dccb] pt-3">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#8a8371]">
+        Backup
+      </p>
+      <div className="mt-2 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={exportBackup}
+          className="text-[12.5px] text-[#6f6858] underline underline-offset-2 transition-colors hover:text-[#26221b]"
+        >
+          Export backup
+        </button>
+        {confirming ? (
+          <span className="flex items-center gap-2 text-[12.5px] text-[#6f6858]">
+            Replace everything in this browser with the backup?
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="font-semibold text-[#b3492b] transition-colors hover:underline"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="text-[#8a8371] transition-colors hover:text-[#4a4436]"
+            >
+              Keep
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null)
+              setConfirming(true)
+            }}
+            className="text-[12.5px] text-[#6f6858] underline underline-offset-2 transition-colors hover:text-[#26221b]"
+          >
+            Import backup
+          </button>
+        )}
+      </div>
+      {error && <p className="mt-2 text-[12px] text-[#9c3d1e]">{error}</p>}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(e) => {
+          void onFileChosen(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+    </div>
+  )
+}
 
 interface ProviderManagerProps {
   keys: Partial<Record<ProviderId, string>>
@@ -153,6 +230,8 @@ export default function ProviderManager({
           )
         })}
       </div>
+
+      <BackupControls />
     </div>
   )
 }
