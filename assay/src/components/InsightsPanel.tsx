@@ -36,8 +36,14 @@ function Chip({ children, className }: { children: React.ReactNode; className: s
   )
 }
 
-export default function InsightsPanel({ items }: { items: SavedAssay[] }) {
-  const [open, setOpen] = useState(false)
+export default function InsightsPanel({
+  items,
+  defaultOpen = false,
+}: {
+  items: SavedAssay[]
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   const data = useMemo(() => computeInsights(items), [items])
 
   if (data.withSignals < 3) return null

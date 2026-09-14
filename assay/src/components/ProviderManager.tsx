@@ -94,7 +94,7 @@ interface ProviderManagerProps {
 const inputClass =
   'w-full rounded-lg border border-[#e2dccb] bg-[#f2eee2]/50 px-3.5 py-2.5 font-mono text-[13px] text-[#26221b] placeholder:text-[#a39b86] focus:border-[#b3492b]/40 focus:outline-none'
 
-export default function ProviderManager({
+export function ProviderManagerContent({
   keys,
   activeProvider,
   onKeysChange,
@@ -134,7 +134,7 @@ export default function ProviderManager({
   }
 
   return (
-    <div className={`${cardClass} w-96 p-5`}>
+    <div>
       <h3 className="text-[14px] font-semibold">AI providers</h3>
       <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#8a8371]">
         Keys are stored only in this browser. Gemini and Groq keys are free;
@@ -230,7 +230,15 @@ export default function ProviderManager({
           )
         })}
       </div>
+    </div>
+  )
+}
 
+/** Popover shell (header) — retired in Step 4 once Settings page ships. */
+export default function ProviderManager(props: ProviderManagerProps) {
+  return (
+    <div className={`${cardClass} w-96 p-5`}>
+      <ProviderManagerContent {...props} />
       <BackupControls />
     </div>
   )
