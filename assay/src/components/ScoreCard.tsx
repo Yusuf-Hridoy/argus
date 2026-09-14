@@ -66,23 +66,30 @@ export default function ScoreCard({ result }: { result: AssayResult }) {
         <p className={labelClass}>Dimension Assay</p>
         <div className="mt-2">
           {result.dimensions.map((d) => (
-            <div key={d.label} className="flex items-center gap-4 py-2.5">
-              <span className="w-32 shrink-0 text-[15px] sm:w-48">{d.label}</span>
-              <div className="h-[7px] flex-1 rounded-full bg-[#e3ddcd]">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    d.score < 80 ? 'bg-[#b3492b]' : 'bg-[#26221b]'
+            <div key={d.label} className="py-2.5">
+              <div className="flex items-center gap-4">
+                <span className="w-32 shrink-0 text-[15px] sm:w-48">{d.label}</span>
+                <div className="h-[7px] flex-1 rounded-full bg-[#e3ddcd]">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      d.score < 80 ? 'bg-[#b3492b]' : 'bg-[#26221b]'
+                    }`}
+                    style={{ width: `${mounted ? d.score : 0}%` }}
+                  />
+                </div>
+                <span
+                  className={`w-8 shrink-0 text-right text-[14px] tabular-nums ${
+                    d.score < 80 ? 'text-[#b3492b]' : 'text-[#26221b]'
                   }`}
-                  style={{ width: `${mounted ? d.score : 0}%` }}
-                />
+                >
+                  {d.score}
+                </span>
               </div>
-              <span
-                className={`w-8 shrink-0 text-right text-[14px] tabular-nums ${
-                  d.score < 80 ? 'text-[#b3492b]' : 'text-[#26221b]'
-                }`}
-              >
-                {d.score}
-              </span>
+              {typeof d.note === 'string' && d.note.trim() !== '' && (
+                <p className="mt-0.5 text-[11.5px] leading-snug text-[#8a8371]">
+                  {d.note}
+                </p>
+              )}
             </div>
           ))}
         </div>
