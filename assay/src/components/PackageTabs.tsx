@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Copy, Check, Download } from 'lucide-react'
 import type { AssayResult } from '../types/assay'
 import { cardClass } from '../lib/ui'
@@ -58,6 +58,16 @@ function slug(s: string): string {
 export default function PackageTabs({ result }: { result: AssayResult }) {
   const [tab, setTab] = useState<Tab>('cv')
   const [copied, setCopied] = useState(false)
+  const barRef = useRef<HTMLDivElement>(null)
+
+  const onTabClick = (id: Tab) => {
+    setTab(id)
+    // If the user scrolled deep into the content, bring the tab bar back —
+    // otherwise leave the scroll position alone (no jumping near the top).
+    if (barRef.current && barRef.current.getBoundingClientRect().top < 0) {
+      barRef.current.scrollIntoView({ block: 'start', behavior: 'instant' })
+    }
+  }
 
   const currentText = () => {
     if (tab === 'cv') return result.tailoredCv
@@ -88,15 +98,19 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
     'flex items-center gap-1.5 rounded-md border border-[#d8d1bf] bg-[#faf7f0] px-3 py-1.5 text-[13px] text-[#26221b] transition-colors hover:bg-[#f0ebdd]'
 
   return (
-    <div className={`overflow-hidden ${cardClass}`}>
-      {/* TAB BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-[#e2dccb] px-4 py-2">
+    <div className={cardClass}>
+      {/* TAB BAR — sticky while the page scrolls (overflow-hidden on the card
+          would break sticky, so the bar carries rounded-t-xl instead). */}
+      <div
+        ref={barRef}
+        className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-t-xl border-b border-[#e2dccb] bg-[#faf7f0] px-4 py-2"
+      >
         <div className="flex items-center gap-1">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => onTabClick(t.id)}
               className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${
                 tab === t.id
                   ? 'bg-[#26221b] font-medium text-[#f4f0e4]'
@@ -128,8 +142,8 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
         </div>
       </div>
 
-      {/* CONTENT AREA */}
-      <div className="md-scroll max-h-[560px] overflow-y-scroll px-6 py-5">
+      {/* CONTENT AREA — flows with the page; no inner scroll box */}
+      <div className="px-6 py-5">
         {tab === 'answers' ? (
           <div className="flex flex-col">
             {result.formAnswers.map((f, i) => (
