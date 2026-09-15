@@ -13,7 +13,7 @@ import type { FollowUpOutcome } from '../lib/followup'
 import type { ProviderId } from '../lib/providers'
 import { cardClass, microLabel } from '../lib/ui'
 import type { AppStatus, SavedAssay } from '../lib/storage'
-import type { InterviewPrep } from '../types/assay'
+import type { AssayResult, InterviewPrep } from '../types/assay'
 
 // Mirrors ScoreCard's private VERDICT_STYLES (kept in sync deliberately —
 // this phase forbids component refactors, so the record is duplicated here
@@ -39,6 +39,7 @@ interface AppDetailViewProps {
   onPrepSaved: (id: string, prep: InterviewPrep) => void
   onNotesSave: (id: string, notes: string) => void
   draftFor: (assay: SavedAssay) => Promise<FollowUpOutcome>
+  onExportPdf: (which: 'cv' | 'letter', result: AssayResult) => void
 }
 
 function relativeDate(ts: number): string {
@@ -67,6 +68,7 @@ export default function AppDetailView({
   onPrepSaved,
   onNotesSave,
   draftFor,
+  onExportPdf,
 }: AppDetailViewProps) {
   const [now] = useState(() => Date.now())
   const [draftOpen, setDraftOpen] = useState(false)
@@ -282,7 +284,7 @@ export default function AppDetailView({
         ) : (
           <>
             <ScoreCard result={assay.result} />
-            <PackageTabs result={assay.result} />
+            <PackageTabs result={assay.result} onExportPdf={onExportPdf} />
             <PrepCard
               key={assay.id}
               assay={assay}

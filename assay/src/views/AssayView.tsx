@@ -34,6 +34,7 @@ interface AssayViewProps {
   onStatusChange: (id: string, status: AppStatus) => void
   onPrepSaved: (id: string, prep: InterviewPrep) => void
   onNotesSave: (id: string, notes: string) => void
+  onExportPdf: (which: 'cv' | 'letter', result: AssayResult) => void
 }
 
 export default function AssayView({
@@ -59,6 +60,7 @@ export default function AssayView({
   onStatusChange,
   onPrepSaved,
   onNotesSave,
+  onExportPdf,
 }: AssayViewProps) {
   return (
     <>
@@ -146,7 +148,7 @@ export default function AssayView({
         ) : result && justRunAssay ? (
           <>
             <ScoreCard result={result} />
-            <PackageTabs result={result} />
+            <PackageTabs result={result} onExportPdf={onExportPdf} />
             <PrepCard
               key={justRunAssay.id}
               assay={justRunAssay}

@@ -13,6 +13,11 @@ import { unescapeArtifacts } from './validate'
  * flows through React text nodes and renders as visible literal text.
  * Links are only emitted as <a> when the URL starts with http://, https://,
  * or mailto:; any other scheme (javascript:, data:, ...) renders as text.
+ *
+ * variant: 'screen' (default) emits the paper-palette Tailwind classes;
+ * 'print' emits bare elements with no classes, styled purely by the
+ * #print-root print stylesheet — this guarantees the print CSS wins and no
+ * screen styling leaks into the PDF.
  */
 
 // Emphasis delimiters must hug non-whitespace on the inside, so stray
@@ -21,13 +26,13 @@ import { unescapeArtifacts } from './validate'
 const INLINE_RE =
   /(\*\*(?=\S)[^*]+?(?<=\S)\*\*|\*(?=\S)[^*\n]+?(?<=\S)\*|`[^`\n]+`|\[[^\]\n]*\]\([^)\n]*\))/g
 
-function inline(text: string, keyPrefix: string): ReactNode[] {
+function inline(text: string, keyPrefix: string, print: boolean): ReactNode[] {
   const parts = text.split(INLINE_RE)
   return parts.map((part, i) => {
     const key = `${keyPrefix}-i${i}`
     if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
       return (
-        <strong key={key} className="font-semibold">
+        <strong key={key} className={print ? undefined : 'font-semibold'}>
           {part.slice(2, -2)}
         </strong>
       )
@@ -36,7 +41,9 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
       return (
         <code
           key={key}
-          className="rounded bg-[#f2eee2] px-1 py-0.5 font-mono text-[12px]"
+          className={
+            print ? undefined : 'rounded bg-[#f2eee2] px-1 py-0.5 font-mono text-[12px]'
+          }
         >
           {part.slice(1, -1)}
         </code>
@@ -51,7 +58,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
             href={m[2]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#b3492b] underline underline-offset-2"
+            className={print ? undefined : 'text-[#b3492b] underline underline-offset-2'}
           >
             {m[1]}
           </a>
@@ -61,7 +68,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     }
     if (/^\*\S(?:[^*\n]*\S)?\*$/.test(part)) {
       return (
-        <em key={key} className="italic">
+        <em key={key} className={print ? undefined : 'italic'}>
           {part.slice(1, -1)}
         </em>
       )
@@ -81,7 +88,11 @@ const ITEM_RE = /^( {0,})([-*]) (.*)$/
 const HR_RE = /^ {0,3}(?:---|\*\*\*|___)$/
 const HEADING_RE = /^ {0,3}(#{1,4}) ?(.*)$/
 
-export function renderMarkdown(src: string): ReactNode {
+export function renderMarkdown(
+  src: string,
+  variant: 'screen' | 'print' = 'screen',
+): ReactNode {
+  const print = variant === 'print'
   // Display-time safety net: entries saved while the escape-repair bug was
   // live still hold literal \n artifacts in storage. Normalize a copy here
   // (presentation only — Copy/download still return the stored string).
@@ -104,7 +115,12 @@ export function renderMarkdown(src: string): ReactNode {
 
     const hr = HR_RE.exec(line)
     if (hr) {
-      blocks.push(<hr key={key} className="my-4 border-t border-[#e2dccb]" />)
+      blocks.push(
+        <hr
+          key={key}
+          className={print ? undefined : 'my-4 border-t border-[#e2dccb]'}
+        />,
+      )
       i++
       continue
     }
@@ -112,11 +128,11 @@ export function renderMarkdown(src: string): ReactNode {
     const heading = HEADING_RE.exec(line)
     if (heading) {
       const level = heading[1].length - 1
-      const cls = HEADING_CLASS[level]
+      const cls = print ? undefined : HEADING_CLASS[level]
       const Tag = (['h1', 'h2', 'h3', 'h4'] as const)[level]
       blocks.push(
         <Tag key={key} className={cls}>
-          {inline(heading[2], key)}
+          {inline(heading[2], key, print)}
         </Tag>,
       )
       i++
@@ -139,21 +155,32 @@ export function renderMarkdown(src: string): ReactNode {
         i++
       }
       blocks.push(
-        <ul key={key} className="mb-2.5 list-disc space-y-1 pl-5">
+        <ul
+          key={key}
+          className={print ? undefined : 'mb-2.5 list-disc space-y-1 pl-5'}
+        >
           {items.map((item, j) => (
             <li
               key={`${key}-li${j}`}
-              className="text-[13.5px] leading-relaxed text-[#26221b] marker:text-[#8a8371]"
+              className={
+                print
+                  ? undefined
+                  : 'text-[13.5px] leading-relaxed text-[#26221b] marker:text-[#8a8371]'
+              }
             >
-              {inline(item.text, `${key}-li${j}`)}
+              {inline(item.text, `${key}-li${j}`, print)}
               {item.children.length > 0 && (
-                <ul className="mb-0 mt-1 list-disc space-y-1 pl-5">
+                <ul className={print ? undefined : 'mb-0 mt-1 list-disc space-y-1 pl-5'}>
                   {item.children.map((c, k) => (
                     <li
                       key={`${key}-li${j}-n${k}`}
-                      className="text-[13.5px] leading-relaxed text-[#26221b] marker:text-[#8a8371]"
+                      className={
+                        print
+                          ? undefined
+                          : 'text-[13.5px] leading-relaxed text-[#26221b] marker:text-[#8a8371]'
+                      }
                     >
-                      {inline(c, `${key}-li${j}-n${k}`)}
+                      {inline(c, `${key}-li${j}-n${k}`, print)}
                     </li>
                   ))}
                 </ul>
@@ -175,11 +202,14 @@ export function renderMarkdown(src: string): ReactNode {
       i++
     }
     blocks.push(
-      <p key={key} className="mb-2.5 text-[13.5px] leading-relaxed text-[#26221b]">
+      <p
+        key={key}
+        className={print ? undefined : 'mb-2.5 text-[13.5px] leading-relaxed text-[#26221b]'}
+      >
         {para.map((l, j) => (
           <span key={`${key}-p${j}`}>
             {j > 0 && <br />}
-            {inline(l, `${key}-p${j}`)}
+            {inline(l, `${key}-p${j}`, print)}
           </span>
         ))}
       </p>,

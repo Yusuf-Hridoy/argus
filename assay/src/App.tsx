@@ -25,6 +25,8 @@ import {
 } from './lib/storage'
 import { runFollowUp } from './lib/followup'
 import { downloadFollowUpIcs } from './lib/ics'
+import { printDocument, type PrintDocData } from './lib/print'
+import PrintDoc from './components/PrintDoc'
 import type { RerunDiff as RerunDiffData } from './components/RerunDiff'
 import type { AssayResult, InterviewPrep } from './types/assay'
 import { navigate, useRoute } from './lib/router'
@@ -52,6 +54,7 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [justRan, setJustRan] = useState(false)
   const [rerunDiff, setRerunDiff] = useState<RerunDiffData | null>(null)
+  const [printDoc, setPrintDoc] = useState<PrintDocData | null>(null)
   const intervalRef = useRef<number | null>(null)
   // When a re-run completes we navigate to the new entry; the route-change
   // effect below must not wipe the fresh diff on arrival.
@@ -245,6 +248,32 @@ export default function App() {
       id: assay.id,
     })
 
+  // Print only after React has committed the print document; the title was
+  // already swapped by printDocument (the browser reads it at print time).
+  useEffect(() => {
+    if (printDoc) window.print()
+  }, [printDoc])
+
+  const handleExportPdf = (which: 'cv' | 'letter', result: AssayResult) => {
+    const slug = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60)
+    const parts = [slug(result.roleTitle), slug(result.company)]
+      .filter(Boolean)
+      .join('-')
+    const filename = which === 'cv' ? `cv-${parts}` : `cover-letter-${parts}`
+    printDocument(
+      setPrintDoc,
+      which === 'cv' ? result.tailoredCv : result.coverLetter,
+      filename,
+    )
+  }
+
   const activeAssay = history.find((h) => h.id === activeId) ?? null
   const justRunAssay = justRan ? activeAssay : null
 
@@ -352,6 +381,7 @@ export default function App() {
             onStatusChange={handleStatusChange}
             onPrepSaved={handlePrepSaved}
             onNotesSave={handleNotesChange}
+            onExportPdf={handleExportPdf}
           />
         )}
         {route.view === 'pipeline' && (
@@ -381,6 +411,7 @@ export default function App() {
             onPrepSaved={handlePrepSaved}
             onNotesSave={handleNotesChange}
             draftFor={draftFollowUp}
+            onExportPdf={handleExportPdf}
           />
         )}
         {route.view === 'insights' && <InsightsView items={history} />}
@@ -393,6 +424,9 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Print-only document root: hidden on screen, sole content when printing. */}
+      {printDoc && <PrintDoc markdown={printDoc.markdown} />}
     </div>
   )
 }

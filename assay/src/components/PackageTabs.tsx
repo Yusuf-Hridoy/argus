@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Copy, Check, Download } from 'lucide-react'
+import { Copy, Check, Download, Printer } from 'lucide-react'
 import type { AssayResult } from '../types/assay'
 import { cardClass } from '../lib/ui'
 import { renderMarkdown } from '../lib/markdown'
@@ -55,7 +55,13 @@ function slug(s: string): string {
     .slice(0, 60)
 }
 
-export default function PackageTabs({ result }: { result: AssayResult }) {
+export default function PackageTabs({
+  result,
+  onExportPdf,
+}: {
+  result: AssayResult
+  onExportPdf?: (which: 'cv' | 'letter', result: AssayResult) => void
+}) {
   const [tab, setTab] = useState<Tab>('cv')
   const [copied, setCopied] = useState(false)
   const barRef = useRef<HTMLDivElement>(null)
@@ -135,6 +141,16 @@ export default function PackageTabs({ result }: { result: AssayResult }) {
               </>
             )}
           </button>
+          {tab !== 'answers' && onExportPdf && (
+            <button
+              type="button"
+              onClick={() => onExportPdf(tab, result)}
+              className={actionClass}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              PDF
+            </button>
+          )}
           <button type="button" onClick={onDownload} className={actionClass}>
             <Download className="h-3.5 w-3.5" />
             .md
