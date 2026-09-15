@@ -1,5 +1,9 @@
+import { useMemo, useState } from 'react'
 import TrackerStats from '../components/TrackerStats'
 import HistoryPanel from '../components/HistoryPanel'
+import RadarCard from '../components/RadarCard'
+import { computeNudges } from '../lib/radar'
+import type { FollowUpOutcome } from '../lib/followup'
 import type { AppStatus, SavedAssay } from '../lib/storage'
 
 interface PipelineViewProps {
@@ -8,6 +12,9 @@ interface PipelineViewProps {
   onOpen: (item: SavedAssay) => void
   onDelete: (id: string) => void
   onStatusChange: (id: string, status: AppStatus) => void
+  onDone: (id: string) => void
+  onIcs: (assay: SavedAssay) => void
+  draftFor: (assay: SavedAssay) => Promise<FollowUpOutcome>
 }
 
 export default function PipelineView({
@@ -16,7 +23,13 @@ export default function PipelineView({
   onOpen,
   onDelete,
   onStatusChange,
+  onDone,
+  onIcs,
+  draftFor,
 }: PipelineViewProps) {
+  const [now] = useState(() => Date.now())
+  const nudges = useMemo(() => computeNudges(items, now), [items, now])
+
   return (
     <>
       <section className="max-w-3xl pt-10 pb-6">
@@ -27,6 +40,19 @@ export default function PipelineView({
       </section>
 
       <section className="flex max-w-3xl flex-col gap-6 pb-16">
+        {nudges.length > 0 && (
+          <RadarCard
+            nudges={nudges}
+            items={items}
+            onOpen={(id) => {
+              const item = items.find((i) => i.id === id)
+              if (item) onOpen(item)
+            }}
+            onDone={onDone}
+            onIcs={onIcs}
+            draftFor={draftFor}
+          />
+        )}
         <TrackerStats items={items} />
         <HistoryPanel
           items={items}

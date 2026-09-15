@@ -19,9 +19,12 @@ import {
   saveAssay,
   deleteAssay,
   updateAssay,
+  markFollowedUp,
   type AppStatus,
   type SavedAssay,
 } from './lib/storage'
+import { runFollowUp } from './lib/followup'
+import { downloadFollowUpIcs } from './lib/ics'
 import type { RerunDiff as RerunDiffData } from './components/RerunDiff'
 import type { AssayResult, InterviewPrep } from './types/assay'
 import { navigate, useRoute } from './lib/router'
@@ -219,6 +222,29 @@ export default function App() {
     setHistory(listAssays())
   }
 
+  const handleMarkFollowedUp = (id: string) => {
+    markFollowedUp(id)
+    setHistory(listAssays())
+  }
+
+  const handleContactChange = (
+    id: string,
+    contact: SavedAssay['contact'],
+  ) => {
+    updateAssay(id, { contact })
+    setHistory(listAssays())
+  }
+
+  const draftFollowUp = (assay: SavedAssay) =>
+    runFollowUp(activeProvider, keys, assay, resume, Date.now())
+
+  const handleIcs = (assay: SavedAssay) =>
+    downloadFollowUpIcs({
+      roleTitle: assay.result.roleTitle,
+      company: assay.result.company,
+      id: assay.id,
+    })
+
   const activeAssay = history.find((h) => h.id === activeId) ?? null
   const justRunAssay = justRan ? activeAssay : null
 
@@ -335,6 +361,9 @@ export default function App() {
             onOpen={openAssay}
             onDelete={onDeleteHistory}
             onStatusChange={handleStatusChange}
+            onDone={handleMarkFollowedUp}
+            onIcs={handleIcs}
+            draftFor={draftFollowUp}
           />
         )}
         {route.view === 'app' && (
@@ -348,8 +377,10 @@ export default function App() {
             rerunDiff={rerunDiff}
             onRerun={handleRerun}
             onStatusChange={handleStatusChange}
+            onContactChange={handleContactChange}
             onPrepSaved={handlePrepSaved}
             onNotesSave={handleNotesChange}
+            draftFor={draftFollowUp}
           />
         )}
         {route.view === 'insights' && <InsightsView items={history} />}

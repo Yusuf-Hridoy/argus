@@ -12,6 +12,10 @@ export interface SavedAssay {
   appliedAt?: number
   rerunOf?: string
   prep?: InterviewPrep
+  contact?: { name?: string; email?: string; link?: string }
+  statusChangedAt?: number // stamped whenever status changes
+  lastFollowUpAt?: number // stamped when user marks a nudge Done
+  followUpCount?: number // how many times marked done
 }
 
 export const STATUS_ORDER: AppStatus[] = [
@@ -33,12 +37,30 @@ export const STATUS_LABELS: Record<AppStatus, string> = {
 const KEY = 'assay.history'
 const MAX_ENTRIES = 50
 
+function normalizeContact(c: unknown): SavedAssay['contact'] | undefined {
+  if (typeof c !== 'object' || c === null) return undefined
+  const r = c as Record<string, unknown>
+  const out: { name?: string; email?: string; link?: string } = {}
+  for (const k of ['name', 'email', 'link'] as const) {
+    if (typeof r[k] === 'string' && (r[k] as string).trim() !== '') {
+      out[k] = r[k] as string
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined
+}
+
 function migrate(e: SavedAssay): SavedAssay {
   const status = STATUS_ORDER.includes(e.status) ? e.status : 'SAVED'
   const migrated: SavedAssay = {
     ...e,
     status,
     notes: typeof e.notes === 'string' ? e.notes : '',
+  }
+  const contact = normalizeContact(e.contact)
+  if (contact) {
+    migrated.contact = contact
+  } else {
+    delete migrated.contact
   }
   if (
     migrated.prep &&
@@ -115,14 +137,31 @@ export function saveAssay(
 
 export function updateAssay(
   id: string,
-  patch: Partial<Pick<SavedAssay, 'status' | 'notes' | 'prep'>>,
+  patch: Partial<Pick<SavedAssay, 'status' | 'notes' | 'prep' | 'contact'>>,
 ): SavedAssay | undefined {
   const list = read()
   const index = list.findIndex((e) => e.id === id)
   if (index === -1) return undefined
   const entry = { ...list[index], ...patch }
+  if (patch.status !== undefined && patch.status !== list[index].status) {
+    entry.statusChangedAt = Date.now()
+  }
   if (patch.status === 'APPLIED' && entry.appliedAt === undefined) {
     entry.appliedAt = Date.now()
+  }
+  list[index] = entry
+  writeQuotaSafe(list)
+  return entry
+}
+
+export function markFollowedUp(id: string): SavedAssay | undefined {
+  const list = read()
+  const index = list.findIndex((e) => e.id === id)
+  if (index === -1) return undefined
+  const entry: SavedAssay = {
+    ...list[index],
+    lastFollowUpAt: Date.now(),
+    followUpCount: (list[index].followUpCount ?? 0) + 1,
   }
   list[index] = entry
   writeQuotaSafe(list)
