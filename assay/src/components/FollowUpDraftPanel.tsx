@@ -19,7 +19,10 @@ export default function FollowUpDraftPanel({
 }: FollowUpDraftPanelProps) {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading')
   const [draft, setDraft] = useState<FollowUpOutcome['draft'] | null>(null)
-  const [fellBackFrom, setFellBackFrom] = useState<string | null>(null)
+  const [fallback, setFallback] = useState<{
+    from: string
+    used: string
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -29,8 +32,13 @@ export default function FollowUpDraftPanel({
     draftFor()
       .then((outcome) => {
         setDraft(outcome.draft)
-        setFellBackFrom(
-          outcome.fellBackFrom ? PROVIDERS[outcome.fellBackFrom].label : null,
+        setFallback(
+          outcome.fellBackFrom
+            ? {
+                from: PROVIDERS[outcome.fellBackFrom].label,
+                used: PROVIDERS[outcome.usedProvider].label,
+              }
+            : null,
         )
         setPhase('ready')
       })
@@ -77,9 +85,9 @@ export default function FollowUpDraftPanel({
 
       {phase === 'ready' && draft && (
         <>
-          {fellBackFrom && (
+          {fallback && (
             <p className="mb-1.5 text-[11.5px] text-[#8a5a1d]">
-              {fellBackFrom} was rate-limited — drafted on a fallback provider.
+              {fallback.from} was rate-limited — drafted on {fallback.used}.
             </p>
           )}
           <p className="text-[13px] font-semibold">{draft.subject}</p>
