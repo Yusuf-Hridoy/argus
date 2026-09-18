@@ -48,11 +48,10 @@ body {
 }
 
 @media print {
-  body.printing-doc > #root > * {
+  body.printing-doc > #root {
     display: none !important;
   }
-  /* Specificity tie with the rule above — must come after it to win. */
-  body.printing-doc #print-root {
+  body.printing-doc > #print-root {
     display: block !important;
     position: static;
     width: auto;
